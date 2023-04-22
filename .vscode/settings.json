@@ -1,0 +1,10 @@
+{
+    "python.analysis.extraPaths": [
+        "./api/ibapi_client"
+    ],
+    "python.analysis.ignore": [
+        "api/ibapi_client",
+        "_old",
+        "_old2"
+    ]
+}
