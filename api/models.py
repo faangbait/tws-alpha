@@ -58,7 +58,7 @@ class Position(Base):
 
     @property
     def liquidity(self) -> Decimal:
-        if self.account and self.position > 0 and self.last_trade:
+        if self.account and self.position > 0 and self.last_trade and self.account.cash_balance:
             return ((self._position * Decimal(self.last_trade)) / self.account.cash_balance).quantize(Decimal('1.00000'))
         else:
             return Decimal('0.00000')

@@ -35,9 +35,7 @@ class twsDatabase(twsWrapper, twsClient):
 
     def rebalance_all(self):
         with Session(self.engine) as session:
-            objs = session.query(Position).filter(Position._position > 0).all()
-            objs.extend(session.query(Position).filter(Position._target_liquidity > 0).all())
-            
+            objs = session.query(Position).filter(Position._position > 0).union(session.query(Position).filter(Position._target_liquidity > 0))
             with open (Config.BASE_PATH / "exports" / "rebalance.csv", "w") as csvfile:
                 csvwriter = csv.writer(csvfile)
                 for obj in objs:
@@ -45,11 +43,13 @@ class twsDatabase(twsWrapper, twsClient):
                         "DES",
                         obj.symbol,
                         obj.sec_type,
-                        f"{'SMART' or obj.exchange}/{obj.primary_exchange}",
+                        # f"{'SMART' or obj.exchange}/{obj.primary_exchange}",
+                        "SMART/AMEX",
                         '', '', '', '', '',
-                        obj.target_liquidity
+                        obj.target_liquidity * 100
                         ])
-            logger.info(f"Rebalance exported...{len(objs)} positions changed")
+                    logger.info(f"DES,{obj.symbol},{obj.sec_type},SMART/AMEX,,,,,,{obj.target_liquidity * 100}")
+            logger.info(f"Rebalance exported...{objs.count()} positions changed")
 
     def stop_request(self, reqId: TickerId):
         with Session(self.engine) as session:
@@ -68,7 +68,6 @@ class twsDatabase(twsWrapper, twsClient):
 
     def add_symbol(self, symbol: str):
         self.reqMatchingSymbols(self.nextOrderId(), symbol)
-        
         with Session(self.engine) as session:
             pos = session.get(Position, symbol)
             if pos:
@@ -159,6 +158,8 @@ class twsDatabase(twsWrapper, twsClient):
 
             for contractDescription in contractDescriptions:
                 contract = contractDescription.contract
+                if contract.primaryExchange not in ["NYSE", "NASDAQ", "ARCA", "PINK", "AMEX"]:
+                    continue
                 obj = session.query(Position).filter(Position.symbol == contract.symbol, Position.currency == contract.currency).first()
                 if obj:
                     obj.sec_type = contract.secType

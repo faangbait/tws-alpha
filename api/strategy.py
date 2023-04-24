@@ -1,7 +1,9 @@
 from api.db import twsDatabase
+from api.models import Position
 from api.wrappers import twsClient, twsWrapper
 from etl.load_seekingalpha import capture_keyboard_paste
 from ibapi.utils import iswrapper
+from sqlalchemy.orm import Session
 
 import logging
 
@@ -98,3 +100,19 @@ class twsStrategy(twsDatabase):
 
         print("--------------------------------------------------------------------------------\n")
         logger.debug("Resuming flow...")
+
+    def rebalance_all(self):
+        with Session(self.engine) as session:
+            positions = session.query(Position)
+            for position in positions:
+                position.target_liquidity = 0
+            session.add_all(positions)
+            session.commit()
+
+        with Session(self.engine) as session:
+            positions = session.query(Position).filter(Position.quant_rating + Position.analyst_rating + Position.author_rating > 13).order_by(-1 * Position.quant_rating).limit(5)
+            for position in positions:
+                position.target_liquidity = .1
+            session.add_all(positions)
+            session.commit()
+        super().rebalance_all()
