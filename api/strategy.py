@@ -110,9 +110,14 @@ class twsStrategy(twsDatabase):
             session.commit()
 
         with Session(self.engine) as session:
-            positions = session.query(Position).filter(Position.quant_rating + Position.analyst_rating + Position.author_rating > 13).order_by(-1 * Position.quant_rating).limit(5)
+            positions = (session.query(Position)
+                .filter(Position.quant_rating + Position.analyst_rating + Position.author_rating > 13)
+                .filter(Position.primary_exchange != "PINK")
+                .order_by(-1 * Position.quant_rating)
+                .limit(5)
+            )
             for position in positions:
-                position.target_liquidity = .1
+                position.target_liquidity = .2
             session.add_all(positions)
             session.commit()
         super().rebalance_all()

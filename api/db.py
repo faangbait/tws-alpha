@@ -44,7 +44,7 @@ class twsDatabase(twsWrapper, twsClient):
                         obj.symbol,
                         obj.sec_type,
                         # f"{'SMART' or obj.exchange}/{obj.primary_exchange}",
-                        "SMART/AMEX",
+                        f"{'SMART/ARCAEDGE' if obj.primary_exchange in ['PINK'] else 'SMART/AMEX'}",
                         '', '', '', '', '',
                         obj.target_liquidity * 100
                         ])
