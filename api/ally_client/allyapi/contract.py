@@ -6,7 +6,7 @@ class Contract(Object):
         self.symbol: str = ""
         self.secType: str = "STK"
         self.currency: str = "USD"
-        self.exchange: str = "NYSE"
+        self.exchange: str = ""
         self.primaryExchange: str = "NYSE"
 
 
