@@ -71,6 +71,7 @@ class twsStrategy(twsDatabase):
             super().keyboardInterrupt()
 
     def print_menu(self):
+        print("A\tSelect Account")
         print("L\tLoad New Watchlist (SA)")
         print("P\tLoad Portfolio (SA)")
         print("R\tRefresh All")
@@ -82,6 +83,8 @@ class twsStrategy(twsDatabase):
         self.print_menu()
         selection = input("selection: ")
         match selection.upper():
+            case "A":
+                self.select_account()
             case "R":
                 self.refresh_all()
             case "L":

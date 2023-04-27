@@ -67,13 +67,11 @@ class twsDatabase(twsWrapper, twsClient):
             session.commit()
 
     def add_symbol(self, symbol: str):
-        self.reqMatchingSymbols(self.nextOrderId(), symbol)
         with Session(self.engine) as session:
             pos = session.get(Position, symbol)
-            if pos:
-                return pos
-            else:
-                return Position(symbol=symbol, currency="USD")
+            if not pos:
+                pos = Position(symbol=symbol, currency="USD")
+            self.add_position(pos)
 
     def add_position(self, position: Position):
         symbol = position.symbol
@@ -120,8 +118,12 @@ class twsDatabase(twsWrapper, twsClient):
             obj = session.get(Position, contract.symbol)
 
             if not obj:
-                obj = self.add_symbol(contract.symbol)
+                self.add_symbol(contract.symbol)
             
+            obj = session.get(Position, contract.symbol)
+            if not obj:
+                raise Exception(f"Couldn't create position {obj}")
+
             obj.account_id = accountName
             obj.position = position
             obj.last_trade = marketPrice
@@ -140,7 +142,11 @@ class twsDatabase(twsWrapper, twsClient):
             obj = session.get(Position, contract.symbol)
 
             if not obj:
-                obj = self.add_symbol(contract.symbol)
+                self.add_symbol(contract.symbol)
+            
+            obj = session.get(Position, contract.symbol)
+            if not obj:
+                raise Exception(f"Couldn't create position {obj}")
             
             obj.account_id = account
             obj.position = position

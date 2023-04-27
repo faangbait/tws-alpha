@@ -30,6 +30,25 @@ class twsClient(EClient):
         self.disconnect()
         logger.warn("Disconnecting...")
 
+    def select_account(self):
+        if not hasattr(self, "accounts"):
+            return
+        
+        print("\n\nSelect an account: ")
+        
+        accountsList = getattr(self, "accounts", [])
+        for idx, account in enumerate(accountsList):
+            print(f"{idx+1}\t{account}")
+        
+        try:
+            acct_idx = int(input("Account: "))
+            self.account = accountsList[acct_idx-1]
+        except KeyboardInterrupt:
+            self.wrapper.stop()
+
+        except Exception as e:
+            print(e)
+
 
     @sleep_and_retry
     @limits(calls=1, period=1)
