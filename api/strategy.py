@@ -72,8 +72,8 @@ class twsStrategy(twsDatabase):
 
     def print_menu(self):
         print("A\tSelect Account")
+        print("C\tClear Watchlist")
         print("L\tLoad New Watchlist (SA)")
-        print("P\tLoad Portfolio (SA)")
         print("R\tRefresh All")
         print("Z\tRebalance Export")
         print("X\tExit")
@@ -85,14 +85,12 @@ class twsStrategy(twsDatabase):
         match selection.upper():
             case "A":
                 self.select_account()
+            case "C":
+                self.clear_watchlist()
             case "R":
                 self.refresh_all()
             case "L":
                 new_positions = capture_keyboard_paste()
-                for pos in new_positions:
-                    self.add_position(pos)
-            case "P":
-                new_positions = capture_keyboard_paste(screener=False)
                 for pos in new_positions:
                     self.add_position(pos)
             case "Z":
