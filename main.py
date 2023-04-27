@@ -5,7 +5,6 @@ import datetime
 from pprint import pp
 import logging
 from api.conf import set_logger
-# from etl.ingress_from_seekingalpha import capture_keyboard_paste
 from api.conf import Config
 from api.db import twsDatabase
 from api.strategy import twsStrategy
@@ -27,26 +26,6 @@ def main():
     if args.wipe_database:
         logger.warn("Wiping database...")
         twsDatabase(fresh=True)
-
-    # enable logging when member vars are assigned
-    from ibapi import utils
-    from ibapi.order import Order
-    from ibapi.contract import Contract, DeltaNeutralContract
-    from ibapi.tag_value import TagValue
-    from ibapi.order_condition import (TimeCondition, ExecutionCondition,
-                                        MarginCondition, PriceCondition,
-                                        PercentChangeCondition, VolumeCondition)
-    Order.__setattr__ = utils.setattr_log
-    Contract.__setattr__ = utils.setattr_log
-    DeltaNeutralContract.__setattr__ = utils.setattr_log
-    TagValue.__setattr__ = utils.setattr_log
-    TimeCondition.__setattr__ = utils.setattr_log
-    ExecutionCondition.__setattr__ = utils.setattr_log
-    MarginCondition.__setattr__ = utils.setattr_log
-    PriceCondition.__setattr__ = utils.setattr_log
-    PercentChangeCondition.__setattr__ = utils.setattr_log
-    VolumeCondition.__setattr__ = utils.setattr_log
-
     app = twsStrategy()
 
     if args.global_cancel:
@@ -60,5 +39,5 @@ def main():
         raise Exception(f"Could not connect to {args.host}:{args.port} as client 0")
 
 if __name__ == "__main__":
-    pp(f"TWS Alpha Seeker v{Config.VERSION} Started")
+    pp(f"Ally Alpha Seeker v{Config.VERSION} Started")
     main()

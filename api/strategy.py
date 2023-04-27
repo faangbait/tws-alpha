@@ -2,7 +2,6 @@ from api.db import twsDatabase
 from api.models import Position
 from api.wrappers import twsClient, twsWrapper
 from etl.load_seekingalpha import capture_keyboard_paste
-from ibapi.utils import iswrapper
 from sqlalchemy.orm import Session
 
 import logging
@@ -11,13 +10,15 @@ logger = logging.getLogger('tws-alpha')
 
 class twsStrategy(twsDatabase):
     def __init__(self, *args, **kwargs) -> None:
+        logger.info("Initializing strategy...")
         self.global_cancel = False
         self.started = False
-        self.nextValidOrderId = None
+        self.nextValidOrderId = 0
 
-        logger.info("Initializing...")
         twsWrapper.__init__(self)
         twsClient.__init__(self, wrapper=self)
+
+        logger.info("Initializing database...")
         twsDatabase.__init__(self, **kwargs)
 
     def cancel_all(self):
@@ -37,18 +38,15 @@ class twsStrategy(twsDatabase):
         logger.info("Updates started...")
 
         self.cancel_all()
-        self.reqMarketDataType(4)
 
         if len(self.accounts) > 1:
             self.reqPositions()
 
-    @iswrapper
     def nextValidId(self, orderId: int):
         super().nextValidId(orderId)
         if not self.started:
             self.start()
     
-    @iswrapper
     def managedAccounts(self, accountsList: str):
         logger.info(f"Account discover started: {accountsList}")
         super().managedAccounts(accountsList)
@@ -56,10 +54,9 @@ class twsStrategy(twsDatabase):
         for account in accountsList.split(','):
             logger.info(f"Requesting account updates for {account}")
             self.reqAccountUpdates(True, account)
-        if self.nextValidOrderId is not None and not self.started:
+        if not self.started:
             self.start()
 
-    @iswrapper
     def updateAccountValue(self, key: str, val: str, currency: str, accountName: str):
         if currency == "USD":
             super().updateAccountValue(key, val, currency, accountName)
@@ -71,6 +68,7 @@ class twsStrategy(twsDatabase):
             super().keyboardInterrupt()
 
     def print_menu(self):
+        print("A\tSelect Account")
         print("L\tLoad New Watchlist (SA)")
         print("P\tLoad Portfolio (SA)")
         print("R\tRefresh All")
@@ -82,6 +80,8 @@ class twsStrategy(twsDatabase):
         self.print_menu()
         selection = input("selection: ")
         match selection.upper():
+            case "A":
+                self.select_account()
             case "R":
                 self.refresh_all()
             case "L":

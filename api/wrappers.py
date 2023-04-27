@@ -1,11 +1,10 @@
 import json
 
 from ratelimit import sleep_and_retry, limits
-from ibapi.client import EClient
-from ibapi.common import TagValueList, TickerId
-from ibapi.contract import Contract
-from ibapi.wrapper import EWrapper
-from ibapi.utils import iswrapper
+from allyapi.client import EClient
+from allyapi.common import TagValueList, TickerId
+from allyapi.contract import Contract
+from allyapi.wrapper import EWrapper
 import logging
 
 logger = logging.getLogger('tws-alpha')
@@ -15,12 +14,10 @@ class twsClient(EClient):
         self.connected = False
         super().__init__(wrapper=self)
 
-    @iswrapper
     def connectAck(self):
         if self.asynchronous:
             self.startApi()
 
-    @iswrapper
     def keyboardInterrupt(self):
         super().keyboardInterrupt()
         self.stop()
@@ -68,7 +65,6 @@ class twsWrapper(EWrapper):
                 else:
                     logger.warn(f"Error. { dict(id=reqId, code=errorCode, msg=errorString) }")
     
-    @iswrapper
     def nextValidId(self, orderId: int):
         super().nextValidId(orderId)
         logger.debug(f"setting nextValidOrderId: %d", orderId)
@@ -82,7 +78,6 @@ class twsWrapper(EWrapper):
         else:
             raise Exception("Invalid Order ID")
 
-    @iswrapper
     def updateAccountValue(self, key: str, val: str, currency: str, accountName: str):
         super().updateAccountValue(key, val, currency, accountName)
         logger.debug(f"{key}: {val}")

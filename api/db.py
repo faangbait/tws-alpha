@@ -7,12 +7,9 @@ from sqlalchemy.orm import Session
 import logging
 from api.conf import Config
 from api.wrappers import twsClient, twsWrapper
-from ibapi.common import ListOfContractDescription, TagValueList, TickAttrib, TickerId
-from ibapi.contract import Contract, ContractDescription
-from ibapi.ticktype import TickType
+from allyapi.contract import Contract, ContractDescription
+from allyapi.common import ListOfContractDescription, TagValueList, TickAttrib, TickType, TickerId
 from api.models import Base, Account, Position
-
-from ibapi.utils import iswrapper
 
 logger = logging.getLogger('tws-alpha')
 
@@ -67,13 +64,11 @@ class twsDatabase(twsWrapper, twsClient):
             session.commit()
 
     def add_symbol(self, symbol: str):
-        self.reqMatchingSymbols(self.nextOrderId(), symbol)
         with Session(self.engine) as session:
             pos = session.get(Position, symbol)
-            if pos:
-                return pos
-            else:
-                return Position(symbol=symbol, currency="USD")
+            if not pos:
+                pos = Position(symbol=symbol, currency="USD")
+            self.add_position(pos)
 
     def add_position(self, position: Position):
         symbol = position.symbol
@@ -88,7 +83,6 @@ class twsDatabase(twsWrapper, twsClient):
         with Session(self.engine) as session:
             return session.query(Account).all()
 
-    @iswrapper
     def updateAccountValue(self, key: str, val: str, currency: str, accountName: str):
         """Database update for account value"""
         with Session(self.engine) as session:
@@ -104,7 +98,6 @@ class twsDatabase(twsWrapper, twsClient):
             session.commit()
         super().updateAccountValue(key, val, currency, accountName)
 
-    @iswrapper
     def managedAccounts(self, accountsList: str):
         with Session(self.engine) as session:
             for id in accountsList.split(','):
@@ -114,14 +107,17 @@ class twsDatabase(twsWrapper, twsClient):
             session.commit()
         super().managedAccounts(accountsList)
 
-    @iswrapper
     def updatePortfolio(self, contract: Contract, position: Decimal, marketPrice: float, marketValue: float, averageCost: float, unrealizedPNL: float, realizedPNL: float, accountName: str):
         with Session(self.engine) as session:
             obj = session.get(Position, contract.symbol)
 
             if not obj:
-                obj = self.add_symbol(contract.symbol)
+                self.add_symbol(contract.symbol)
             
+            obj = session.get(Position, contract.symbol)
+            if not obj:
+                raise Exception(f"Couldn't create position {obj}")
+
             obj.account_id = accountName
             obj.position = position
             obj.last_trade = marketPrice
@@ -133,15 +129,18 @@ class twsDatabase(twsWrapper, twsClient):
 
         super().updatePortfolio(contract, position, marketPrice, marketValue, averageCost, unrealizedPNL, realizedPNL, accountName)
 
-    @iswrapper
     def position(self, account: str, contract: Contract, position: Decimal, avgCost: float):
         """ Database update for position"""
         with Session(self.engine) as session:
             obj = session.get(Position, contract.symbol)
 
             if not obj:
-                obj = self.add_symbol(contract.symbol)
+                self.add_symbol(contract.symbol)
             
+            obj = session.get(Position, contract.symbol)
+            if not obj:
+                raise Exception(f"Couldn't create position {obj}")
+                
             obj.account_id = account
             obj.position = position
             obj.updated_at = int(time.time())
@@ -151,7 +150,6 @@ class twsDatabase(twsWrapper, twsClient):
             session.commit()
         super().position(account, contract, position, avgCost)
 
-    @iswrapper
     def symbolSamples(self, reqId: int, contractDescriptions: ListOfContractDescription):
         contractDescription: ContractDescription
         with Session(self.engine) as session:
@@ -171,7 +169,6 @@ class twsDatabase(twsWrapper, twsClient):
             session.commit()
         super().symbolSamples(reqId, contractDescriptions)
 
-    @iswrapper
     def reqMktData(self, reqId: TickerId, contract: Contract, genericTickList: str, snapshot: bool, regulatorySnapshot: bool, mktDataOptions: TagValueList):
         with Session(self.engine) as session:
             obj = session.get(Position, contract.symbol)
@@ -182,7 +179,6 @@ class twsDatabase(twsWrapper, twsClient):
                 session.commit()
                 super().reqMktData(reqId, contract, genericTickList, snapshot, regulatorySnapshot, mktDataOptions)
 
-    @iswrapper
     def tickPrice(self, reqId: TickerId, tickType: TickType, price: float, attrib: TickAttrib):
         with Session(self.engine) as session:
             for obj in session.scalars(select(Position).where(Position.req_id == reqId)):

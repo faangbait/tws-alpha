@@ -160,5 +160,7 @@ cython_debug/
 #.idea/
 
 api/ibapi_client
+
+secret.py
 exports
 *.sqlite3

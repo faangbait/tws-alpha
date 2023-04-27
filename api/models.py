@@ -4,7 +4,7 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 import time
 
-from ibapi.contract import Contract
+from allyapi.contract import Contract
 
 
 class Base(DeclarativeBase):
