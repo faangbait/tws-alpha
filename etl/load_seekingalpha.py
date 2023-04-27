@@ -39,21 +39,26 @@ def letter_to_value(letter):
 
     return val
 
-def capture_keyboard_paste(screener=True):
+def capture_keyboard_paste():
     new_positions: List[Position] = []
+    screener = False
 
     while True:
         try:
             obj = Position()
-            if screener:
-                rank = input("Rank:\t")
-            
-            obj.symbol = input("Symbol:\t")
             obj.currency = "USD"
+            obj.updated_at = int(time.time())
+
+            col1 = input("Rank/Symbol:\t")
+
+            if col1.isdigit():
+                screener = True
+                obj.symbol = input("Symbol:\t")
+            else:
+                screener = False
+                obj.symbol = col1
             
-            if screener:
-                company = input("Company:\t")
-        
+            company = input("Company:\t")
             obj.quant_rating = letter_to_value(input("Quant: ")[-4:])
             obj.author_rating = letter_to_value(input("Author: ")[-4:])
             obj.analyst_rating = letter_to_value(input("Analyst: ")[-4:])
@@ -67,7 +72,7 @@ def capture_keyboard_paste(screener=True):
             obj.momentum = letter_to_value(input("Momentum: "))
             obj.epsrevision = letter_to_value(input("EPS Revisions: "))
 
-            obj.updated_at = int(time.time())
             new_positions.append(obj)
+
         except KeyboardInterrupt:
             return new_positions

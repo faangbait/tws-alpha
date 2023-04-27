@@ -30,6 +30,11 @@ class twsDatabase(twsWrapper, twsClient):
             for obj in session.query(Position).filter(Position.req_id == None):
                 self.reqMktData(self.nextOrderId(), obj.contract, "", False, False, [])
 
+    def clear_watchlist(self):
+        with Session(self.engine) as session:
+            session.query(Position).where(Position.account_id == None).delete()
+            session.commit()
+
     def rebalance_all(self):
         with Session(self.engine) as session:
             objs = session.query(Position).filter(Position._position > 0).union(session.query(Position).filter(Position._target_liquidity > 0))
