@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 import logging
 from api.conf import Config
 from api.wrappers import twsClient, twsWrapper
+from etl.yahoo_finance import get_analyst_target_mean
 from ibapi.common import ListOfContractDescription, TagValueList, TickAttrib, TickerId
 from ibapi.contract import Contract, ContractDescription
 from ibapi.ticktype import TickType
@@ -31,7 +32,10 @@ class twsDatabase(twsWrapper, twsClient):
     def refresh_all(self):
         with Session(self.engine) as session:
             for obj in session.query(Position).filter(Position.req_id == None):
+                logger.info(f"Getting data for {obj.symbol}")
                 self.reqMktData(self.nextOrderId(), obj.contract, "", False, False, [])
+                obj.analyst_target = get_analyst_target_mean(obj.symbol)
+                session.add(obj)
 
     def clear_watchlist(self):
         with Session(self.engine) as session:
