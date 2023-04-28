@@ -4,7 +4,7 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 import time
 
-from allyapi.contract import Contract
+# from allyapi.contract import Contract
 
 
 class Base(DeclarativeBase):
@@ -79,18 +79,18 @@ class Position(Base):
     def target_liquidity(self, val):
         self._target_liquidity = val
 
-    @property
-    def contract(self):
-        contract = Contract()
-        contract.symbol = self.symbol
-        contract.currency = self.currency
-        contract.secType = self.sec_type
-        if self.exchange:
-            contract.exchange = self.exchange
-        else:
-            contract.exchange = "SMART"
-        contract.primaryExchange = self.primary_exchange
-        return contract
+    # @property
+    # def contract(self):
+    #     contract = Contract()
+    #     contract.symbol = self.symbol
+    #     contract.currency = self.currency
+    #     contract.secType = self.sec_type
+    #     if self.exchange:
+    #         contract.exchange = self.exchange
+    #     else:
+    #         contract.exchange = "SMART"
+    #     contract.primaryExchange = self.primary_exchange
+    #     return contract
 
     def __repr__(self) -> str:
         if self.position > 0:

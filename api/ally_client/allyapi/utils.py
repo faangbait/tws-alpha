@@ -26,3 +26,20 @@ class AttrDict(dict):
                 data[k] = new_v
             return cls({key: cls.from_nested_dicts(data[key]) for key in data})
 
+class COLORS:
+    @staticmethod
+    def fg_rgb(s,r,g,b):
+        return f"\x1b[38;2;{r};{g};{b}m{s}\x1b[0m"
+    
+    @staticmethod
+    def bg_rgb(s,r,g,b):
+        return f"\x1b[48;2;{r};{g};{b}m{s}\x1b[0m"
+
+    @staticmethod
+    def red(s):
+        return f"\x1b[1;31m{s}\x1b[0m"
+    
+    @staticmethod
+    def dim(s):
+        return f"\x1b[2;37;100m{s}\x1b[0m"
+

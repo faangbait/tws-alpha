@@ -2,5 +2,7 @@
 ratelimit >= 2.2.1, <3
 sqlalchemy >=2.0.10, <3
 requests >= 2.29.0, <3
-requests-oauthlib >=1.3.1,<2
+requests-oauthlib >=1.3.1, <2
 pytest >= 7.3.1, <8
+yahooquery[premium] >= 2.3.1, <3
+prettytable >= 3.7.0, <4

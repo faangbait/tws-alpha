@@ -160,9 +160,17 @@ class AllyAPI:
             uri = f"accounts/{id}/orders"
             method = RESTMethod.post
             headers = {
-                "TKI_OVERRIDE": not warn_on_orders
+                "TKI_OVERRIDE": (not warn_on_orders).__repr__().lower()
             }
             return self.__request(method, uri, data=order.render, headers=headers)
+
+        def cancel_orders(self, id: str, order: Order, warn_on_orders=True):
+            uri = f"accounts/{id}/orders"
+            method = RESTMethod.post
+            headers = {
+                "TKI_OVERRIDE": (not warn_on_orders).__repr__().lower()
+            }
+            return self.__request(method, uri, data=order.render_cancel, headers=headers)
 
         def post_preview(self, id: str, order: Order, warn_on_orders=True):
             uri = f"accounts/{id}/orders/preview"
@@ -202,7 +210,7 @@ class AllyAPI:
             method = RESTMethod.get
             return self.__request(method, uri)
 
-        def quotes(self, symbols: List[str] | str, fids: Set[Literal["ask","bid","vol"]] = {"ask","bid","vol"}):
+        def quotes(self, symbols: List[str] | str, fids: Set[str] = set()):
             """
             Note: You can technically use a list of symbols, but the return has to be manually handled.
             """
@@ -415,8 +423,12 @@ class EClient(object):
         for account in getattr(self, "accounts", []):
             r = self.connection.trade.get_orders(account.id)
             assert r is not None
-            for order in r.response.orderstatus.order:
-                print(f"NOTIMPL: Global Cancel: {order}")
+            for fixmlorder in r.response.orderstatus.order:
+                msg = fixmlorder.get("fixmlmessage")
+                order = Order(Contract())
+                order.parse(msg)
+                self.connection.trade.cancel_orders(order.account, order)
+                logger.warn(f"Global Cancel: {order}")
 
     def reqPositions(self):
         pass

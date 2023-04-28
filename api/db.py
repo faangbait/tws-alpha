@@ -2,15 +2,18 @@
 import csv
 from decimal import Decimal
 import time
+from typing import List
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 import logging
+from allyapi.order import Order
 from api.conf import Config
+from api.recommendations import sell_above_analyst_target, sell_bad_quants
 from api.wrappers import twsClient, twsWrapper
 from allyapi.contract import Contract, ContractDescription
 from allyapi.common import ListOfContractDescription, TagValueList, TickAttrib, TickType, TickerId
 from api.models import Base, Account, Position
-
+from etl.yahoo_finance import get_analyst_target_mean
 logger = logging.getLogger('tws-alpha')
 
 class twsDatabase(twsWrapper, twsClient):
@@ -28,7 +31,16 @@ class twsDatabase(twsWrapper, twsClient):
     def refresh_all(self):
         with Session(self.engine) as session:
             for obj in session.query(Position).filter(Position.req_id == None):
-                self.reqMktData(self.nextOrderId(), obj.contract, "", False, False, [])
+                logger.info(f"Getting data for {obj.symbol}")
+                contract=Contract()
+                contract.symbol = obj.symbol
+                contract.position = obj
+                contract.primaryExchange = obj.primary_exchange
+                contract.secType = obj.sec_type
+                self.reqMktData(self.nextOrderId(), contract, "", False, False, [])
+                obj.analyst_target = get_analyst_target_mean(obj.symbol)
+                session.add(obj)
+            session.commit()
 
     def clear_watchlist(self):
         with Session(self.engine) as session:
@@ -53,6 +65,52 @@ class twsDatabase(twsWrapper, twsClient):
                     logger.info(f"DES,{obj.symbol},{obj.sec_type},SMART/AMEX,,,,,,{obj.target_liquidity * 100}")
             logger.info(f"Rebalance exported...{objs.count()} positions changed")
 
+    def generate_sell_recs(self):
+        sells: List[Order] = []
+
+        with Session(self.engine) as session:
+            objs = session.query(Position).where(Position._position > 0).all()
+            for obj in sell_bad_quants(objs):
+                contract = Contract()
+                contract.symbol = obj.symbol
+                contract.secType = obj.sec_type
+                contract.position = obj
+                
+                order = Order(contract)
+                order.account = obj.account_id
+                order.action = "SELL"
+                order.totalQuantity = obj._position
+                order.orderType = "LMT"
+                order.lmtPrice = obj.last_trade
+                order.tif = "GTC"
+                order.transmit = True
+                sells.append(order)
+
+            for obj in sell_above_analyst_target(objs):
+                contract = Contract()
+                contract.symbol = obj.symbol
+                contract.secType = obj.sec_type
+                contract.position = obj
+
+                order = Order(contract)
+                order.account = obj.account_id
+                order.action = "SELL"
+                order.totalQuantity = obj._position
+                order.orderType = "LMT"
+                order.lmtPrice = obj.analyst_target
+                order.tif = "GTC"
+                order.transmit = True
+                sells.append(order)
+        return sells
+    
+    def generate_buy_recs(self):
+        buys: List[Order] = []
+        
+        with Session(self.engine) as session:
+            objs = session.query(Position).all()
+        
+        return buys
+    
     def stop_request(self, reqId: TickerId):
         with Session(self.engine) as session:
             for obj in session.scalars(select(Position).where(Position.req_id == reqId)):

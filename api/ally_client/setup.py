@@ -12,7 +12,7 @@ if sys.version_info < (3,1):
     sys.exit("Only Python 3.1 and greater is supported") 
 
 setup(
-    name='ibapi',
+    name='allyapi',
     version=get_version_string(),
     packages=['allyapi'],
     url='https://github.com/faangbait/allyapi',
