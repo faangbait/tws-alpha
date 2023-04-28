@@ -2,14 +2,17 @@
 import csv
 from decimal import Decimal
 import time
+from typing import List, Tuple
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 import logging
 from api.conf import Config
+from api.recommendations import sell_above_analyst_target, sell_bad_quants
 from api.wrappers import twsClient, twsWrapper
 from etl.yahoo_finance import get_analyst_target_mean
 from ibapi.common import ListOfContractDescription, TagValueList, TickAttrib, TickerId
 from ibapi.contract import Contract, ContractDescription
+from ibapi.order import Order
 from ibapi.ticktype import TickType
 from api.models import Base, Account, Position
 
@@ -33,9 +36,15 @@ class twsDatabase(twsWrapper, twsClient):
         with Session(self.engine) as session:
             for obj in session.query(Position).filter(Position.req_id == None):
                 logger.info(f"Getting data for {obj.symbol}")
-                self.reqMktData(self.nextOrderId(), obj.contract, "", False, False, [])
+                contract=Contract()
+                contract.symbol = obj.symbol
+                contract.primaryExchange = obj.primary_exchange
+                contract.secType = obj.sec_type
+                contract.currency = obj.currency
+                self.reqMktData(self.nextOrderId(), contract, "", False, False, [])
                 obj.analyst_target = get_analyst_target_mean(obj.symbol)
                 session.add(obj)
+            session.commit()
 
     def clear_watchlist(self):
         with Session(self.engine) as session:
@@ -59,6 +68,52 @@ class twsDatabase(twsWrapper, twsClient):
                         ])
                     logger.info(f"DES,{obj.symbol},{obj.sec_type},SMART/AMEX,,,,,,{obj.target_liquidity * 100}")
             logger.info(f"Rebalance exported...{objs.count()} positions changed")
+
+    def generate_sell_recs(self):
+        sells: List[Tuple[Order, Contract]] = []
+
+        with Session(self.engine) as session:
+            objs = session.query(Position).where(Position._position > 0).all()
+            for obj in sell_bad_quants(objs):
+                contract = Contract()
+                contract.symbol = obj.symbol
+                contract.secType = obj.sec_type
+                # contract.position = obj
+                
+                order = Order()
+                order.account = obj.account_id
+                order.action = "SELL"
+                order.totalQuantity = obj._position
+                order.orderType = "LMT"
+                order.lmtPrice = obj.last_trade
+                order.tif = "GTC"
+                order.transmit = True
+                sells.append((order, contract))
+
+            for obj in sell_above_analyst_target(objs):
+                contract = Contract()
+                contract.symbol = obj.symbol
+                contract.secType = obj.sec_type
+                # contract.position = obj
+
+                order = Order()
+                order.account = obj.account_id
+                order.action = "SELL"
+                order.totalQuantity = obj._position
+                order.orderType = "LMT"
+                order.lmtPrice = obj.analyst_target
+                order.tif = "GTC"
+                order.transmit = True
+                sells.append((order, contract))
+        return sells
+    
+    def generate_buy_recs(self):
+        buys: List[Tuple[Order, Contract]] = []
+        
+        with Session(self.engine) as session:
+            objs = session.query(Position).all()
+        
+        return buys
 
     def stop_request(self, reqId: TickerId):
         with Session(self.engine) as session:
